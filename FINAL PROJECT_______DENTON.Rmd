@@ -1,0 +1,401 @@
+---
+title: "Final Project"
+author: "Ryan Denton"
+date: "3/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+***Q01***
+
+
+
+*Load potentially usage packages, load dataset, create dataframe we will be using*
+```{r}
+library(pacman)
+library(broom)
+library(here)
+library(fixest)
+library(tidyverse)
+library(TSA)
+library(lmtest)
+library(forecast)
+library(stargazer)
+
+
+list.files()
+
+
+final_project_df = read.csv("data-final.csv")
+
+
+```
+
+
+
+
+
+
+***Q02***
+
+
+This is cross-sectional data. When we look at the data overall we see that we are looking at one county each time over the United States during 2020. We are taking data from different individuals (counties) at a single point in time (the year 2020). We are not comparing the same individuals (in this case counties) over time to see how things are changing over time (that would be time-series data). 
+
+
+
+
+
+
+***Q03***
+
+
+*We will create histograms for the following variables: "pop_total", "pct_nonwhite", & "pm_24hr"*
+```{r}
+hist(final_project_df$pop_total,
+     main = "Total County Pop.",
+     ylab="Frequency",
+     xlab="Total Population",
+     col="aquamarine4"
+)
+
+
+
+
+
+
+hist(final_project_df$pct_nonwhite,
+     main = "% non-white",
+     ylab="Frequency",
+     xlab="% of Pop. not identifying as 'white'",
+     col="aquamarine3"
+)
+
+
+
+
+hist(final_project_df$pm_24hr,
+     main = "Pollution",
+     ylab="Frequency",
+     xlab="Fine particle matter level (24-hr standard)",
+     col="aquamarine2"
+)
+
+```
+
+
+
+
+
+
+***Q04***
+
+
+*We will create a scatterplot with the percent of the population that does not identify as white on the x-axis and the log of PM pollution of the y-axis*
+```{r}
+final_project_df|>
+  ggplot(aes(x =pct_nonwhite, y = log(pm_24hr)))+
+  geom_point(col="red", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="% of pop. not identifying as 'white'",
+    y= "log(PM pollution)"
+  )
+
+```
+
+
+
+
+
+
+***Q05***
+
+
+*Regress the log of pollution on the the non-white percent of the population*
+```{r}
+Q05_reg_mod = feols((log(pm_24hr))~ pct_nonwhite, data= final_project_df, vcov= "het")
+
+
+
+summary(Q05_reg_mod)
+
+```
+
+
+
+
+
+
+***Q06***
+
+
+*Interpret coefficient on 'pct_nonwhite'*
+
+For every percentage point increase in the percent of the county that does not identify as white we expect the fine particle matter (24-hour standard) to increase by about 55.5% on average, all else equal.
+
+
+
+
+
+
+***Q07***
+
+
+As we know, measurement error causes attenuation bias. So to answer this question, measurement error in the 'pct_nonwhite' would bias the coefficient on 'pct_nonwhite' toward 0.
+
+
+
+
+
+
+***Q08***
+
+
+Leaving out the variable 'urban' will cause the coefficient on 'pct_nonwhite' to be an over-estimate due to upward bias. This is because the variable 'pct_nonwhite' will be explaining some of the variation that the 'urban' variable would explain if it were in our model. Thus, these effects are not being teased apart due to us not including the variable 'urban' in our model, resulting in our coefficient on 'pct_nonwhite' being an over-estimate.
+
+
+
+
+
+
+***Q09***
+
+
+*Here we will regress the log of pollution on the non-white percent of the population as well as the log of total population*
+```{r}
+Q09_regress_mod = feols( (log(pm_24hr))~ pct_nonwhite + I(log(pop_total)), data= final_project_df, vcov="het")
+
+
+summary(Q09_regress_mod)
+
+```
+
+
+
+
+
+
+***Q10***
+
+
+The coefficient on the log of the total population tells us that for every 1% increase in the total population of these counties we would expect the fine particle matter level (24-hour standard) to increase by about 0.039% on average, all else constant.
+
+
+
+
+
+
+***Q11***
+
+
+Let's look at some potentially insightful information:
+
+```{r}
+final_project_df|>
+  ggplot(aes(x = log(pop_total), y = pct_nonwhite))+
+  geom_point(col="green4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="log(total population)",
+    y= "% nonwhite"
+  )
+
+cor(final_project_df$pop_total, final_project_df$pct_nonwhite)
+
+
+Q11_reg_mod = feols( (log(pop_total)) ~ pct_nonwhite, data = final_project_df, vcov='het')
+
+summary(Q11_reg_mod)
+
+
+```
+
+Yes, I do believe that omitting total population was causing bias. In the regression for Q05 we can see that we were over-estimating the coefficient on 'pct_nonwhite' by not including total population. It is more likely that the counties with larger populations will have a larger percentage of the population that does not identify as white, since there are more people. Further, we can see in the graph above that there does indeed appear to be a positive relationship between total population and the percent that does not identify as white, as the population increases it seems that so to does the percent that does not identify as white, as expected. This is further supported by the correlation function output of about 0.35 and the summary table of the regression of log(total population) on the percent of the population that does not identify as white (which has a positive coefficient that is significant at the 1% level). Note for the regression we used het-robust standard errors.
+
+
+
+
+
+
+***Q12***
+
+
+Since this is cross-sectional data we should not worry about autocorrelation. This is because there is not a time component in our variables in such a way that our variables are being analyzed over time. Instead we are looking at a measure for each of these counties for a single year. This measure is a single measure that has to do with some of the highest PM2.5 values observed in a county over the year of 2020.
+
+
+Although autocorrelation can be an issue in cross-sectional data, it is usually assumed that is is not an issue I believe. We didn't learn anything about autocorrelation and cross-sectional data at least, maybe in the future I will learn about this!! :)
+
+
+
+
+
+
+***Q13***
+
+
+
+We should default to being concerned with heteroskedasticity. The models ran in this assignment were all done using het-robust standard errors and so our models should have been corrected for any heteroskedasticity that may have been present. 
+
+Further, if we look at the following two scatterplots from the models we ran in this assignment:
+
+
+```{r}
+final_project_df|>
+  ggplot(aes(x =log(pop_total), y = log(pm_24hr)))+
+  geom_point(col="black", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="Log(Total Pop.)",
+    y= "log(pollution)"
+  )
+
+
+final_project_df|>
+  ggplot(aes(x =pct_nonwhite, y = log(pm_24hr)))+
+  geom_point(col="chocolate4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="% of pop. not identifying as 'white'",
+    y= "log(pollution)"
+  )
+```
+
+
+we can see that heteroskedasticity does seem to be present visually since the variances are not the same across these explanatory variables, but we need a White test to see if this is actually the case. 
+
+
+To check this, lets grab the residuals from both regressions ran (Q05 & Q09) in order to perform a White test for each model.
+
+
+First lets grab the residuals from each model and add them to our dataset.
+```{r}
+
+final_project_df$Q05_e = residuals(Q05_reg_mod)
+
+
+final_project_df$Q09_e = residuals(Q09_regress_mod)
+
+```
+
+
+
+Next, lets create a White model for the regression from Q05 and grab the R-squared value from this model:
+```{r}
+
+Q05_white_model = lm(
+  I(Q05_e^2) ~ pct_nonwhite + I(pct_nonwhite^2), data = final_project_df
+)
+
+
+
+(Q05_white_mod_r2 = summary(Q05_white_model)$r.squared)
+
+```
+
+
+Now we need our test statistic:
+```{r}
+(Q05_white_test_stat = 543*Q05_white_mod_r2)
+
+```
+
+And now find the p-value under chi-squared distribution, with 2 degrees of freedom:
+```{r}
+pchisq(
+  q=Q05_white_test_stat,
+  df=2,
+  lower.tail = F
+)
+
+```
+
+This is a high p-value that suggests that we do not have statistically significant evidence that heteroskedasticity is present in the regression ran in Q05. So we fail to reject the null hypothesis of homoskedasticity.
+
+Lets take a look at the residual plot for this:
+```{r}
+final_project_df|>
+  ggplot(aes(x =pct_nonwhite, y = Q05_e))+
+  geom_point(col="chocolate4")+
+  geom_smooth(method="lm")+
+  labs(
+    x="% of pop. not identifying as 'white'",
+    y= "Residuals"
+  )
+
+```
+
+So, our White test concludes that we do not have statistically significant evidence of heteroskedasticity, but the residual plot makes it look like there could be some present. But, if we exclude just the uppermost 3 data points the variance does seem to be within the same range for all the data.
+
+We will agree with the White test here and say that we do not have enough evidence to reject the null hypothesis of homoskedasticity for this model. 
+
+
+
+
+Next, lets do all the same process but this time we will look at the model from Q09.
+
+```{r}
+Q09_white_model = lm(
+  I(Q09_e^2) ~ pct_nonwhite + I(log(pop_total)) + I(pct_nonwhite^2) + I(log(pop_total)^2) + pct_nonwhite:I(log(pop_total)), data = final_project_df
+)
+
+
+
+
+(Q09_white_mod_r2 = summary(Q09_white_model)$r.squared)
+
+
+
+(Q09_white_test_stat = 543*Q09_white_mod_r2)
+
+
+
+pchisq(
+  q=Q09_white_test_stat,
+  df=5,
+  lower.tail = F
+)
+
+
+
+```
+
+Notice here we have a p-value of about 0.013, which is significant at the 5% level. According to this test we reject the null hypothesis of homoskedasticity and conclude we have statistically significant evidence of heteroskedasticity in the model from Q09.
+
+
+As a little extra, lets see a residual plot from this model with log(total population) on the x-axis:
+```{r}
+final_project_df|>
+  ggplot(aes(x =log(pop_total), y = Q09_e))+
+  geom_point(col="chocolate4")+
+  geom_smooth(method="lm")+
+  labs(
+    x="Log(total population)",
+    y= "Residuals"
+  )
+
+```
+
+and another residual plot with 'pct_nonwhite' on x-axis from this model:
+```{r}
+final_project_df|>
+  ggplot(aes(x =pct_nonwhite, y = Q09_e))+
+  geom_point(col="chocolate2")+
+  geom_smooth(method="lm")+
+  labs(
+    x="% of pop. not identifying as 'white'",
+    y= "Residuals"
+  )
+
+```
+
+
+
+
+
+Further, in the two models ran in this assignment we did not include income in either one nor did we include the type of area, such as urban and not urban (as mentioned before). This makes me think that the disturbances will be correlated since income will be in the disturbance of both of these models as it likely affects the level of pollution in these counties as well as is correlated with other things that are in the disturbance, such as whether the area is urban or not (which also likely affects pollution levels). So yes, we should be worried about correlated disturbances. 

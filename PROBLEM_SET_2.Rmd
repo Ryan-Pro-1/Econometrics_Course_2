@@ -1,0 +1,542 @@
+---
+title: "Problem Set 2"
+author: "Ryan Denton"
+date: "2/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***
+
+<h1>Part 1: Setup</h1>
+
+
+
+
+***Q1.1***
+
+
+```{r}
+library(pacman)
+library(tidyverse)
+library(here)
+library(fixest)
+library(stargazer)
+library(tidyselect)
+library(broom)
+
+```
+
+
+
+
+
+***Q1.2***
+
+
+```{r}
+list.files()
+
+ps2_df = read.csv("002-data.csv")
+
+```
+
+
+
+
+
+***Q1.3***
+
+
+```{r}
+summary(ps2_df)
+
+nrow(ps2_df)
+
+```
+
+
+There are 948 states in this dataset.
+
+
+
+
+
+
+
+***
+
+
+
+<h1>Part 2: Conceptual Questions</h1>
+
+
+
+
+
+
+
+***Q2.1***
+
+
+Homoskedasticity means that the variance of the error (or disturbance) term, given any explanatory variable, is the same and heteroskedasticity means that this variance differs and is NOT the same. For example, if our model is homoskedastic then all of the observations will fall within a constant range of our line of best fit for all observations. For instance if we had income on the y-axis and age on the x-axis, then income would have the same distribution of variance about our regression line for all ages.
+If our model is heteroskedastic then our observations will fall within different ranges of our line of best fit for some of our explanatory variables. In the context of the example, then the variance of the error term for income would differ across age in some way that is not the same. 
+
+
+
+
+
+
+***Q2.2***
+
+
+Homoskedasticity, as mentioned above, has to do with the variance in the error term being the same given any explanatory variable(s). Exogeniety, on the other hand, has to do with the variables in our model explaining our outcome variable in an uncorrelated manner from one another. For example, if something in our error term that is explaining the outcome variable's variation at all, is correlated with an explanatory variable that is included in our model, then this variable in the error term is going to explain some variation in both the included explanatory variable AND the outcome variable and exogeneity can no longer be assumed. 
+
+Exogenous variables are variables that are not effected by other variables in our model, whereas homoskedasticiy has to do with the variance in the error term being the same. 
+
+
+
+
+
+
+***Q2.3***
+
+
+Heteroskedasticity violates the OLS assumption of homoskedasticity (i.e that the errors/disturbances have a constant variance).
+
+
+
+
+
+***Q2.4***
+
+
+Heteroskedasticity biases our standard errors and therefore our t-, f-, or $\chi^2$ statistics, which in turn of course means our hypothesis testing and confidence intervals are incorrect. So, this screws up our inference. The parameter values are still technically unbiased but we definitely want to fix the issue so we can properly infer things about the population from the model. Further, our models are no longer the most efficient linear unbiased estimator, as the efficiency of our model does not "survive" heteroskedasticity.  
+
+
+
+
+
+
+***Q2.5***
+
+
+To "deal with" heteroskedasticity we can check the specification of our model to ensure we are not creating it through misspecification. If that not the case then we can find new, more efficient, unbiased estimators for our parameters, such as weighted least squares. Or, we can stick with the OLS and find a new variance estimator in order to fix our standard deviations, confidence intervals, and hypothesis tests. Heteroskedastic-Robust standard errors are a part of this last one as well which give us standard errors that essentially correct for heteroskedasticity.
+
+
+
+
+
+***
+
+
+
+
+
+<h1>Part 3: Testing for Heteroskedasticity</h1> 
+
+
+
+
+***Q3.1***
+
+
+```{r}
+reg_bkinc_slvpop1860_pop2010 = lm(income_black_2010 ~ pct_pop_enslaved_1860 + pop_total_2010, data = ps2_df)
+
+
+stargazer(reg_bkinc_slvpop1860_pop2010, type="text")
+
+```
+
+The coefficient of "pct_pop_enslaved_1860 means that for every 1 percentage point increase in a county's population that was enslaved in 1860, we expect the median black household income in 2010 to fall in those counties by about 51 dollars on average, all else equal.
+
+
+
+
+
+
+***Q3.2***
+
+
+```{r}
+ps2_df$residuals_from_Q3.1 = residuals(reg_bkinc_slvpop1860_pop2010)
+
+
+
+ps2_df|>
+  ggplot(aes(x =pct_pop_enslaved_1860, y = residuals_from_Q3.1))+
+  geom_point(col="blue")+
+  labs(
+    x="Percent of County Population Enslaved in 1860",
+    y= "Residuals"
+  )
+
+
+
+ps2_df|>
+  ggplot(aes(x =pop_total_2010, y = residuals_from_Q3.1))+
+  geom_point(col="aquamarine4")+
+  labs(
+    x="County Population in 2010",
+    y= "Residuals"
+  )
+
+
+```
+
+
+
+
+
+
+
+***Q3.3***
+
+
+Yes, the scatter plots in Q3.2 do suggest heteroskedasticity may be present in our disturbances in this model. Visually it seems this way because in the first plot you can see that the variance decreases as the percentage of a county's population that was enslaved in 1860 increases. It kind of looks like a "reverse funnel" shape, if you will.
+
+In the second plot it also looks like heteroskedasticity is present, this time looking a bit more like a "double-funnel" shape, so the variance also seems to decrease as the county's population in 2010 increases over some range and then it seems to begin to increase again. So yes, the variance does seem to decrease and then begin to increase again if I had to assume what is going on in this graph and therefore I would say that heteroskedasticity is present and would want to investigate further.
+
+
+
+
+
+
+
+***Q3.4***
+
+
+*Arranging data and re-estimating the model using the 316 lower and upper third.*
+```{r}
+ps2_df = arrange(ps2_df, pct_pop_enslaved_1860)
+
+
+
+Q3.4_model_tail = lm(income_black_2010 ~ pct_pop_enslaved_1860 + pop_total_2010, data = tail(ps2_df,316))
+
+
+Q3.4_model_head = lm(income_black_2010 ~ pct_pop_enslaved_1860 + pop_total_2010, data = head(ps2_df,316))
+
+
+```
+
+
+
+*Then grab the residuals from each of these models*
+```{r}
+Q3.4_model_tail_resids = residuals(Q3.4_model_tail)
+
+Q3.4_model_head_resids = residuals(Q3.4_model_head)
+
+```
+
+
+*Next need to calculate the SSE of the two models*
+```{r}
+(sseT_Q3.4_model_tail_resids = sum(Q3.4_model_tail_resids^2))
+
+
+(sseH_Q3.4_model_head_resids = sum(Q3.4_model_head_resids^2))
+
+```
+
+
+*Calculate the G-Q test statistic*
+```{r}
+(GQ_test_stat_Q3.4 = sseH_Q3.4_model_head_resids/sseT_Q3.4_model_tail_resids)
+
+```
+
+
+*Find the p-value*
+```{r}
+pf(
+  q= GQ_test_stat_Q3.4,
+  df1 = 316-3,
+  df2= 316-3,
+  lower.tail = F
+)
+
+```
+
+
+The null hypothesis is that these two "subgroups" have the same variance. As we can see this p-value is extremely low and thus we can reject the null hypothesis and conclude that we have found statistically significant evidence, at the 5% level, of heteroskedasticity using the Golfeld-Quandt test.
+
+
+
+
+
+
+***Q3.5***
+
+
+No, a p-value of 0.4097 is not statistically significant at any level close to what we care about and thus does not suggest that there is heteroskedasticity. This test is limiting in the fact that it can only test for a specific type of heteroskedasticity, that of a certain "funnel shaped" variety, where the first subgroup has a variance of error terms that is either larger or smaller than that of the last subgroup. So, for example, if the first group had large variance of error terms then the middle group had lower variance but then the last group had a variance that is the same as the first group the G-Q test would not conclude heteroskedasticity, though it is present, because it ignores this middle group in its test. But in this test, as noted before, it seems more like a double-funnel shape (decreasing variance then increasing again) and that is why this test is not picking up on it.
+
+This is very restrictive as to when we can rely on such a test and, in my opinion, is why it should never be used. We should just stick to the White test to be safe! :)
+
+
+
+
+
+***Q3.6***
+
+
+*Begin White test by taking the squared residuals from the model previously ran and regressing them on the explanatory variables, their squares, and their interactions*
+```{r}
+white_model_bkinc_slvpop1860_totpop2010 = lm(
+  I(residuals_from_Q3.1^2) ~ pct_pop_enslaved_1860 + pop_total_2010 + I(pct_pop_enslaved_1860^2) + I(pop_total_2010^2) + pct_pop_enslaved_1860:pop_total_2010, data = ps2_df 
+)
+
+```
+
+
+*Next we need to grab the r-squared value from this regression*
+```{r}
+(r2_Q3.6_white_model = summary(white_model_bkinc_slvpop1860_totpop2010)$r.squared)
+
+```
+
+
+*Now we need our test statistic*
+```{r}
+(test_stat_Q3.6_white_mod = nrow(ps2_df)*r2_Q3.6_white_model)
+
+
+```
+
+
+*Lastly we can find the p-value, recalling that this will follow the chi-squared distribution and not the F-distribution like the G-Q test and that our degrees of freedom here are the number of parameters in our white model (not including the intercept)*
+```{r}
+pchisq(
+  q = test_stat_Q3.6_white_mod,
+  df= 5,
+  lower.tail = F
+)
+
+
+```
+
+
+
+
+Recall that our null for the white test in this case is:
+$$H_o:\alpha_1=\alpha_2=\alpha_3=\alpha_4=\alpha_5=0$$
+
+Where the $\alpha$ terms are the coefficients from the white regression model that we began our white test with. What this null is saying is that no variation in the squared residuals (and consequently the residuals themselves) is explained by any of the coefficients in this model (i.e. the explanatory variables, their squares, and their interaction). So we are testing this null and thereby testing the hypothesis that the model has no heteroskedasticity (in other words that the model is homoskedastic). 
+
+But, note the p-value we just found is well below 0.05 and therefore we reject this null hypothesis and conclude there is statistically significant evidence of heteroskedasticity at the 5% level of significance. 
+
+
+
+
+
+***
+
+
+
+
+
+<h1>Part 4: Correcting for Heteroskedasticity</h1>
+
+
+
+
+
+***Q4.1***
+
+
+*Lets begin WLS approach to Q3.1 using "pop_black_2010" as our weight*
+```{r}
+wls_Q4.1 = lm(income_black_2010 ~ pct_pop_enslaved_1860 + pop_total_2010, data = ps2_df, weights = pop_black_2010)
+
+
+stargazer(reg_bkinc_slvpop1860_pop2010, wls_Q4.1, type = "text", keep.stat = c("n","adj.rsq"),
+          covariate.labels = c("% of pop. enslaved (1860)", "County Pop. (2010)"),
+          dep.var.labels = "Black Median Household Income (2010)",
+          dep.var.caption = "Columns: (1) = OLS, (2) = WLS")
+
+
+```
+
+
+The WLS model is saying for the "% of pop. enslaved (1860)" variable is that for every 1 percentage point increase in a county's enslaved population in 1860, we would expect the median black household income in 2010 to decrease by about 44 dollars on average, all else constant. Further, the standard error of this parameter value is about 24 dollars on average. 
+
+
+We can notice in this table that the coefficient of this variable increased by about 6.96 and the standard error increased by about 3.089. So by weighting by the black population in 2010 the standard error of this variable increases and so too does the estimated effect on black median household income in 2010 per percentage point increase in this explanatory variable. We can also notice that the parameter goes from being significant at the 5% level to then being significant at just the 10% level.
+
+
+
+For the "county population in 2010" variable, the WLS model is saying that for each additional person in a county's population in the year 2010 we expect the black median household income to increase by less than 1 penny on average, all else constant, with a standard error of about 0.001. 
+
+
+Again we notice a change here in the coefficient and standard error. This coefficient decreases by about 0.011 and the standard error of this variable decreased by about 0.001. The statistical significance level remains the same for both models in this case, both significant at the 1% level.  
+
+
+***Q4.2***
+
+
+Because we are dividing each parameter by a function of the square root of black population in 2010 of these counties. If we know that the black population in 2010 is the source of the heteroskedasticity then this WLS method changes the heteroskedastic model into a homoskedastic one when we weight by this variable. Since we are looking at groups (i.e. each county) we could assume that the data will be heteroskedastic in a predictable fashion, since the variance in black household median income in 2010 will likely depend on the size of the sample (county population that is black in this case). 
+
+
+
+
+***Q4.3***
+
+*Let's begin by running regression using "feols"*
+```{r}
+het_rob_se_model_Q4.3 = feols(income_black_2010 ~ pct_pop_enslaved_1860 + pop_total_2010, data = ps2_df)
+
+```
+
+
+*Then display the results in a summary table*
+```{r}
+summary(het_rob_se_model_Q4.3, vcov = "iid")
+
+summary(het_rob_se_model_Q4.3, vcov = "hetero")
+```
+
+Here you can see that the coefficient values remain the same for both of these models. The standard errors do change though. The standard error of the "percentage of the population that was enslaved" variable increases by about 1 unit when going from the model that assumes homoskedasticity to the model that uses heteroskedasticity-robust standard errors.
+
+
+The standard error of the "total county population in 2010" variable also increases by about 0.002358 units when going from the model that assumes homoskedasticity to the model that uses heteroskedasticity-robust standard errors.
+
+
+Therefore, we can see that the difference is standard errors are so small that I would say that they are negligible.
+
+
+
+
+
+
+
+
+***
+
+
+
+
+<h1>Part 5: Correcting for Correlated Disturbances</h1>
+
+
+
+
+***Q5.1***
+
+
+*We will compare the standard errors from the regression in Q3.1 to a new regression where we cluster at stat level*
+```{r}
+cluster_state_reg_Q5.1 = feols(income_black_2010 ~ pct_pop_enslaved_1860 + pop_total_2010, data = ps2_df, cluster = "state")
+
+
+summary(het_rob_se_model_Q4.3, vcov = "iid")
+
+summary(cluster_state_reg_Q5.1)
+```
+
+
+We can see that the standard error of the intercept increases by about 133.9295, the standard error of the "percent of county pop. enslaved in 1860" variable increases by about 12.8529, and the standard error of the "total county population" variable increases by about 0.00325.  
+
+Further, the "percent of county pop. enslaved in 1860" variable went from being statistically significant at the 5% level to not significant at all after clustering at the state level. Also, the "total county population" variable went from statistically significant at the 1% level to significant at the 5% level.
+
+This could point to the hypothesis that the models before were causing us to be overconfident in our parameter estimates and thus possibly coming to false conclusions about the significance of our variables and their effects on black median household income in these counties in the year 2010.
+
+
+
+
+
+
+***
+
+
+
+
+
+<h1>Part 6: Interpreting Indicators and Interactions</h1>
+
+
+
+
+
+***Q6.1***
+
+
+*Model*
+```{r}
+reg_Q6.1_bkinc_pctslv1860_confederate = feols( income_black_2010 ~ pct_pop_enslaved_1860 + was_confederate, data = ps2_df)
+
+```
+
+
+
+*Results using Het-robust SE's*
+```{r}
+summary(reg_Q6.1_bkinc_pctslv1860_confederate, vcov="hetero")
+
+```
+
+
+
+
+
+***Q6.2***
+
+
+This coefficient tells us the expected difference in black median household income in 2010 in counties that joined the Confederacy vs those that did not. This is a negative number, so this means that in those counties that joined the Confederacy we expect black median household income to be about 2,894 dollars less than those counties that did not join, on average and all else constant.
+
+This indicator variable is statistically significant at the 10% level according to this model.
+
+
+
+
+***Q6.3***
+
+
+*Creating the model*
+```{r}
+reg_Q6.3_blkinc_pctslv1860_condeferate_interaction = feols(
+  income_black_2010 ~ pct_pop_enslaved_1860 + was_confederate + pct_pop_enslaved_1860:was_confederate, data = ps2_df)
+
+```
+
+
+
+*Summary of results from regression*
+```{r}
+summary(reg_Q6.3_blkinc_pctslv1860_condeferate_interaction, vcov = "hetero")
+
+```
+
+
+
+***Q6.4***
+
+
+*Interpretation on interaction term in model from Q6.3*
+
+
+This tells us how these two variables interact with one another, of course since it's call an "interaction term", but to interpret this I will partially differentiate this model with respect to "pct_pop_enslaved_1860" to see the marginal effect of how the percentage of a county population that was enslaved in 1860 and whether they joined the Confederacy or not interact to influence black median household income in 2010. After doing this we arrive at:
+
+$$\frac{\partial\space income\_black\_2010}{\partial\space pct\_pop\_enslaved\_1860}=214.061-280.062(was\_confederate)$$
+The effect of the percentage of a county population that was enslaved in 1860 is different depending on whether or not the county joined the confederacy. So, even looking at counties with the same percentage of their population that was enslaved in 1860, there are differing effects on black median household income in 2010 depending on whether they joined the confederacy or not. Joining or not seems to influence the effect of the percent of the county population that was enslaved in 1860 on the black median household income in 2010. And that is what this partial differentiation has revealed, the expected marginal effect on black median household income in 2010 as the percentage of a county population that was enslaved in 1860 changes allowing for whether the county joined the confederacy or not to interact. 
+
+This tells us that the difference in the marginal effect on expected black household median income in 2010 for a percentage point increase in the percent of the county population that was enslaved in 1860 between counties that joined the confederacy vs those that did not is about 280.06 dollars. 
+
+We can see the marginal effect on black median household income in 2010 as the percent of a county's population that was enslaved in 1860 increases by observing these coefficients. For every percentage point increase in the percentage of a county's population that was enslaved in 1860, we expect the black median household income in 2010 to increase by about 214 dollars on average if that county did not join the confederacy (i.e. when "was_confederate" = 0) and we expect that the black median household income in 2010 in those counties that did join the confederacy to decrease by about 66 dollars (the sum of 214.061 and -280.062) on average, all else constant.
+
+
+
+
+
+
+
+***Q6.5***
+
+
+Since, as mentioned in Q6.4, for every percentage point increase in the percent of a county's population that was enslaved in 1860 we expect the black household median income in 2010 to decrease by about 66 dollars on average in those counties that joined the confederacy, there is clearly a negative association. As the percentage of a county's population that was enslaved in 1860 goes up, the black household median income in 2010 in those counties is expected to go down on average, based on this model.
+
+

@@ -1,0 +1,555 @@
+---
+title: "Midterm Project"
+author: "Ryan Denton"
+date: "2/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*Load potentially needed packages and create dataframe variable*
+```{r}
+library(pacman)
+library(tidyverse)
+library(here)
+library(fixest)
+library(stargazer)
+library(tidyselect)
+library(broom)
+
+
+
+list.files()
+
+
+midT_project_df = read.csv("data-prj-01.csv")
+
+
+```
+
+
+
+
+
+***Q01***
+
+
+
+*General summary of data*
+```{r}
+summary(midT_project_df)
+
+```
+
+
+
+*Range for the price of houses*
+```{r}
+max(midT_project_df$price) - min((midT_project_df$price))
+```
+
+The range for the price of houses is 741,900 dollars.
+
+
+
+*Range for the size of houses*
+```{r}
+max(midT_project_df$area)- min((midT_project_df$area))
+
+```
+
+The range for the size of houses in this dataset is 5,308, where the size of the house is measured in terms of area (in square feet).
+
+
+
+*Range for the age of the houses*
+```{r}
+max(midT_project_df$age)- min(midT_project_df$age)
+
+```
+
+The range for the age of the house, at the time of sale, is 136 years.
+
+
+
+*Next let's create a histogram for each one of these variables to get a look at the frequency of occurrence in our dataset. *
+```{r}
+hist(midT_project_df$price,
+     main = "Price of House at Time of Sale (USD)",
+     ylab="Number of Houses",
+     xlab="Price (USD)",
+     col="aquamarine4",
+     ylim = c(0,750),
+     xlim = c(0,800000),
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(0, 800000, 50000))
+axis(2, at = seq(0, 2000, 75), las=1)
+
+
+
+
+hist(midT_project_df$age,
+     main = "Age of House at Time of Sale",
+     ylab="Number of Houses",
+     xlab="Age at time of sale",
+     col="chocolate2",
+     ylim = c(0,650),
+     xlim = c(0,140),
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(0, 140, 5))
+axis(2, at = seq(0, 650, 50), las=1)
+
+
+
+
+hist(midT_project_df$area,
+     main = "Area of House at Time of Sale (SQ FT)",
+     ylab="Number of Houses",
+     xlab="Area of house (SQ FT)",
+     col="purple3",
+     ylim = c(0,850),
+     xlim = c(0,6000),
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(0, 6000, 500))
+axis(2, at = seq(0, 850, 50), las=1)
+
+
+
+```
+
+
+
+
+
+
+***Next let's look at how these main variables, along with others, relate to one another. I will choose to focus on the following three: how age may relate to price, how the number of rooms may relate to the age of the house, and how the house's area may relate to it's quality rating.***
+
+
+
+*First let's create a scatter plot with price on the y-axis and age on the x-axis to see if there seems to be any relation (which we intuitively would expect there to be one)*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =age, y = price))+
+  geom_point(col="chocolate4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="Age of house at time of sale",
+    y= "Price of house at time of sale (USD)"
+  )
+
+```
+
+Here we can see that our intuition seems to be confirmed. There looks to be a negative relationship over a certain range between the age of a house and it's price (as the age of a house goes up, the price goes down, on average, all else constant). Of course this makes sense to us and is exactly what we would expect. But notice that the price then seems to possibly begin to rise after the 100 year mark, this can be because of an "antique effect", if you will, which is seen in many consumer goods (houses included). For example, when a video game comes out it starts off at a higher end on the price scale because it is newer. Then over time the prices decreases as the product ages and is less valuable or desired. But then at some point it becomes a type of "antique" because of it's age and that is then what potentially causes an increase in the price rather than a further decrease. So this same type of effect could be happening here with the houses.
+
+
+
+*Next, let's look at the age of the house at time of sale and the number of rooms the house has. Here we can maybe gain some insight as to a potential relationship between the age of a house and the number of rooms it has. Do older houses tend to have more or less rooms than newer ones? Let's take a look to see if any potential relationship reveals itself by plotting number of rooms on the y-axis and age on the x-axis*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =age, y = n_rooms))+
+  geom_point(col="black", shape=0)+
+  labs(
+    x="Age of house at time of sale",
+    y= "Number of Rooms"
+  )
+
+
+```
+
+Here we can see that in the graph that the number of rooms seems to have a pretty consistent range regardless of the age. So I would conclude that there does not seem to be a relation between the age of a house and the number of rooms it has, on average, based only on this graph. Further, if we think back to our histogram of the age of houses in this dataset, we can see that there are relatively little data on houses that are over 100 years old, therefore it could be this lack of data that is causing fewer data points in this graph. This is because the data we do have on houses of that age could not be a proper representation of all houses of that time and thus this range in this scatter plot could be biased. 
+
+
+
+
+
+*Next, let's look to see if there is a potential relationship between the quality rating of a house and the house's area (in Sq Ft). We will plot the area of the house on the y-axis and the quality rating of the house on the x-axis. I would assume that as the area of a house increases the quality rating would go up due to the perception of higher quality that may come with larger area (assuming the homes are not super messy). Also, those who can afford houses with more area most likely take better care of those houses and have more money to do so. Let's take a look*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =area, y = quality))+
+  geom_point(col="grey4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="Area of house (Sq Ft)",
+    y= "Quality rating"
+  )
+
+
+```
+
+
+This graph seems to provide some potential evidence toward my assumption previously state. There seems to be a strong positive relationship between the area of a house and it's quality rating, the more area a house has then the higher quality rating it is expected to get on average, all else constant.
+
+
+
+
+
+*Lastly, let's look at a potential relationship between price and area of a house. We would expect that as the area of a house increases so to would the price, on average, all else constant. That makes sense intuitively as well. Let's take a look and the scatterplot*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =area, y = price))+
+  geom_point(col="chocolate4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="Area of house (Sq Ft)",
+    y= "Price at time of sale (USD)"
+  )
+
+
+```
+
+
+Again, our assumption seems to have evidence in support of it in this graph. There seems to be a strong positive relationship between the area of a house and it's price at time of sale. Which of course makes sense, the more area a house has then the higher the price for that house will be, seems very reasonable and so there is no surprise here. 
+
+
+
+
+
+
+***Q02***
+
+
+
+*To determine what relationship best fits between these options let's create three graphs (re-using one from above) and then three more graphs of the residual plots in order to compare them and determine which seems to be a better fit. Let us begin with the linear model*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =area, y = price))+
+  geom_point(col="chocolate4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="Area of house (Sq Ft)",
+    y= "Price at time of sale (USD)"
+  )
+
+linmod_Q2 = lm(price~ area, data= midT_project_df)
+
+midT_project_df$linmod_Q2_resids = residuals(linmod_Q2)
+
+
+midT_project_df |>
+  ggplot(aes(x = area, y = linmod_Q2_resids))+
+  geom_point(col="aquamarine4", shape=1)+
+  geom_smooth(method = "lm")+
+  labs(
+    x="Area of house (Sq Ft)",
+    y= "Residuals"
+  )
+
+```
+
+
+
+*Next let's do the log-linear model*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =area, y = log(price)))+
+  geom_point(col="chocolate4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="Area of house (Sq Ft)",
+    y= "Log(Price) at time of sale (USD)"
+  )
+
+
+loglinmod_Q2 = lm(I(log(price))~ area, data =  midT_project_df)
+
+
+midT_project_df$loglinmod_Q2_resids = residuals(loglinmod_Q2)
+
+
+midT_project_df |>
+  ggplot(aes(x = area, y = loglinmod_Q2_resids))+
+  geom_point(col="aquamarine4", shape=1)+
+  geom_smooth(method = "lm")+
+  labs(
+    x="Area of house (Sq Ft)",
+    y= "Residuals"
+  )
+
+```
+
+
+*Lastly, let's look at the log-log relationship*
+```{r}
+midT_project_df|>
+  ggplot(aes(x =log(area), y = log(price)))+
+  geom_point(col="chocolate4", shape=1)+
+  geom_smooth(method="lm")+
+  labs(
+    x="log(Area) of house (Sq Ft)",
+    y= "log(Price) at time of sale (USD)"
+  )
+
+
+loglogmod_Q2 = lm( I(log(price)) ~ I(log(area)), data = midT_project_df)
+
+
+midT_project_df$loglogmod_Q2_resids = residuals(loglogmod_Q2)
+
+
+midT_project_df |>
+  ggplot(aes(x = I(log(area)), y = loglogmod_Q2_resids))+
+  geom_point(col="aquamarine4", shape=1)+
+  geom_smooth(method = "lm")+
+  labs(
+    x="log(Area) of house (Sq Ft)",
+    y= "Residuals"
+  )
+
+
+```
+
+Visually, to me it looks like the log-log model fits best. If we look at just the scatter plot of the log-log model it looks to be a tighter fit around the line of best fit relative to the other two. Further, the residual plot from this same model seems to have less variance about the horizontal axis. Less variance equals a more efficient model and thus I would say that the log-log relationship seems to be the best among the three choices. It is a bit tough between the log-linear model and the log-log model as they both seem to fit about the line much better than the linear version, but if I have to choose I choose the log-log model.
+
+
+
+
+
+***Q03***
+```{r}
+reg_Q3 = lm( price ~ area + is_new, data = midT_project_df)
+
+stargazer(reg_Q3, type='text')
+
+```
+
+This model tells us that with each additional square foot a house has we expect the price of the house at time of sale to increase by about 102 dollars on average, all else constant.
+
+Next, we can see that the expected price of a home at sale is about 19,856 dollars on average when it is older than 1 year at the time of sale (i.e. when "is_new" = 0) holding all else constant. Further, we can see, again holding all else constant, that the average difference in price at the time of sale between a home that is 1 year old or less when sold (i.e. when "is_new" = 1) vs a home that is not is about 64,690 dollars. Thus, the expected house price of a home at time of sale that is 1 year old or less when sold is the sum of the intercept and this difference, meaning we expect the price in this case to be about 84,546 dollars on average, holding all else constant.
+
+Notice that each of these seem to be significant at the 1% level according to this output table, so these numbers are VERY rarely to happen just by chance.
+
+
+
+
+
+***Q04***
+
+
+*Let's add this interaction into the model and interpret it*
+```{r}
+reg_Q4 = lm( price ~ area + is_new + area:is_new, data = midT_project_df)
+
+
+stargazer(reg_Q4, type='text')
+
+```
+
+We are interested in the marginal effect that area has on price, allowing for whether the house is 1 year old or less at time of sale to interact with area, so let's partially differentiate price with respect to area to get a sense of this marginal effect. Doing this gives us
+$$\frac{\partial\ price}{\partial\space area}=103.332-9.796(is\_new)$$
+Which at first glance is interesting because it is not what we would assume, well at least I wouldn't, because it is saying that the marginal effect on the price at time of sale would be expected to lower with each additional unit of area if the house is 1 year old or less vs if it is older than that at time of sale, on average, all else constant. 
+
+Let's interpret this more formally. What this is saying is that the marginal effect on the price of a house at time of sale with each additional square foot of area, for a house that is older than 1 year at time of sale (i.e. when "is_new = 0), is expected to be about 103 dollars more with each unit increase in area, all else constant. So for houses that are older than 1 year at time of sale, we expect that for each additional unit of area that this will increase the price of the house at time of sale by about 103 dollars on average, all else constant.
+
+
+The difference in this marginal effect on the price of a house at time of sale when the house is 1 year old or less at time of sale (i.e. when "is_new = 1) is about 10 dollars less than when the house is older than 1 year at time of sale. Thus, this says that the marginal effect of each additional unit of area is about 10 dollars less if the house is 1 year or less old at time of sale vs a house that is older on average, all else constant. This causes me to question what must be going on in the background because as previously mentioned this doesn't feel right. 
+
+
+Therefore, the expected marginal effect of an additional unit of area on price when the house is 1 year old or less at time of sale is the sum of these two, meaning about 93 dollars. This means we expect about 93 dollars of an increase in price at time of sale for each additional unit of area if the house is 1 year or less old at time of sale, on average, all else constant.
+
+
+
+
+
+***Q05***
+
+
+```{r}
+loglog_reg_Q5 = lm( I(log(price)) ~ I(log(area)) + is_new, data = midT_project_df)
+
+
+
+
+stargazer(loglog_reg_Q5, type='text')
+
+```
+
+Here this coefficient means that for each 1% increase in the area of a house, we expect the price at time of sale to increase by about 0.844% on average, all else constant.
+
+
+
+
+
+
+***Q06***
+
+
+***(A)***
+
+
+```{r}
+midT_project_df$reg_Q3_resids = residuals(reg_Q3)
+
+
+midT_project_df |>
+  ggplot(aes(x = I(log(area)), y = reg_Q3_resids))+
+  geom_point(col="aquamarine4", shape=1)+
+  geom_smooth(method = "lm")+
+  labs(
+    x="log(Area) of house (Sq Ft)",
+    y= "Residuals"
+  )
+
+```
+
+
+
+
+***(B)***
+```{r}
+midT_project_df$loglog_reg_Q5_resids = residuals(loglog_reg_Q5)
+
+
+midT_project_df |>
+  ggplot(aes(x = I(log(area)), y = loglog_reg_Q5_resids))+
+  geom_point(col= 800090, shape=1)+
+  geom_smooth(method = "lm")+
+  labs(
+    x="log(Area) of house (Sq Ft)",
+    y= "Residuals"
+  )
+
+```
+
+
+Yes, part (A) shows definite heteroskedasticity. It looks just like the funnel shape we are used to seeing in our study on the topic. The variance in the error terms is increasing as the area of the house increases.
+
+In part (B) it is a little less obvious in my opinion (especially if you treated the 6 data points that fall below -1 on the vertical axis as outliers), but there does look to be difference in variance of the error terms as the area of the house changes and thus heteroskedasticity does still appear to be present in this model, though no as immediately apparent as before. The variance in the error term seems to increase more slightly in value relative the the graph in part (A).
+
+
+
+
+
+***Q07***
+
+
+*Let's run the regression we did in Q03, but this time using heteroskedasticity-robust standard errors and explain why it matters in this setting. *
+```{r}
+het_rob_reg_Q7 = feols(price ~ area + is_new, data= midT_project_df)
+
+
+summary( het_rob_reg_Q7, vcov = 'hetero')
+
+
+```
+
+
+Yes, correcting for heteroskedasticity matters in this setting. We know it will matter because we just graphed the residual plot of this regression without het-robust standard errors and saw that there is clearly heteroskedasticity present. Therefore if we didn't correct for this our confidence intervals would be different and so our confidence will change. But it should be noted that when we compare the statistical significance the only one that changes is that of the intercept. Both "area" and "is_new" are significant at the 1% level in both models but the intercept goes from being significant at the 1% level (in the model without the het-robust standards errors) to significant at the 10% level (in the model with the het-robust standard errors). So one may be able to argue that it doesn't make that much of a difference if these two are the models we are concerned about comparing, but as mentioned we saw clear heteroskedasticity present and thus I would say it matters and should not be ignored since our confidence intervals will be different due to the change in the standard errors.
+
+
+
+
+
+***Q08***
+
+
+Yes, the coefficient on "is_new" could suffer from omitted-variable bias if we omit the house's quality rating. This because the quality rating a house gets is most likely going to be correlated with if that house is 1 year or less old at time of sale. Much newer houses (such as 1 year or less at time of sale) are most likely going to get higher quality ratings due to the fact that they are so new. So we would expect these two variables to be correlated and thus leaving the quality rating out of the model is likely to lead to omitted-variable bias of our coefficient on "is_new".
+
+
+
+
+
+***Q09***
+
+
+*Model 1. In the first model we will regress price at time of sale on area of the house, the quality rating of the house, the indicator as whether the house is 1 year or less old, an interaction term between quality rating and "is_new", and an interaction between area and quality rating. We are adding the interaction between quality and "is_new" because it makes sense that the marginal effect on the price of a house at time of sale may be different whether the house is 1 year old or less vs being older than 1 year at time of sale.Further, we are adding the interaction between area and quality rating because we would expect that the marginal effect on price of a unit increase in area will be different depending of the quality score the house received. Let's see how this turns out. Of course for all three of these models we will be using het-robust standard errors to be sure our standard errors are beneficial to us in any inference.*
+```{r}
+model_1_Q9 = feols( price~ area + quality + is_new + quality:is_new + area:quality, data= midT_project_df)
+
+
+summary(model_1_Q9, vcov='hetero')
+
+```
+
+Here we see that only the coefficients on quality rating, "is_new", and the interaction between these two is statistically significant. Quality being significant at the 5% level, same with "is_new", and the interaction between the two is significant at the 1% level. Since the area and the interaction between area and "is_new" is not significant, we will only focus on the marginal effect of the quality rating of a house on the price at time of sale and how it is different between houses a year old or less vs houses that are older than a year at time of sale. Note that the interpretation of the intercept doesn't make sense in this context as there can't be a house with 0 area, so we will ignore it here.
+
+To find this marginal effect let's take the partial derivative of price with respect to quality:
+$$\frac{\partial\ price}{\partial\space quality}=18289.81 + 12442.87(is\_new)$$
+This reveals that for each point increase a house gets on its quality rating increases price at time of sale by about 18,290 dollars on average, all else constant, if the house is older than 1 year at time of sale. 
+
+We also see that for each point increase a house gets on its quality rating increases price by about 30,733 dollars on average, all else constant, if the house is 1 year or less old at time of sale. 
+
+Finally, the difference of the marginal effect of quality rating on house price on the two is of course the difference between these two numbers, which is the coefficient in front of "is_new" in the partial derivative expression, which is about 12,443 dollars.
+
+
+
+
+*Model 2. This data on house prices was gathered over an interesting time for the housing market, recall the housing market crash of 2008 (as well as an overall financial crash). So it would be interesting to add the year the house was sold in into a model. If we do a quick plot with price on the vertical axis and the year in sold in on the horizontal we see*
+
+```{r}
+
+qplot( year_sold, price, data= midT_project_df)
+
+```
+
+
+Which is what we would expect to see. Far fewer houses sold, and at lower prices, than the previous 3 years. 
+
+Thus, for this next model let's regress price at time of sale on the year the house sold in, the number of rooms, and the quality rating of the house. 
+
+```{r}
+model_2_Q9 = feols( price~ year_sold + n_rooms + quality, data= midT_project_df)
+
+
+summary(model_2_Q9, vcov='hetero')
+
+```
+
+Note that the intercept again does not make sense in this context and will be ignored. The year the house sold in does not appear to be statistically significant in this model, so we will not interpret this coefficient either as it's significance does not seem to exist at a level we are interested in. But we can see that both the number of rooms the house has and it's quality rating are significant at the 0.1% level.
+This model is saying that for each additional room a house has, we expect it's price at time of sale to increase by about 11,145 dollars on average, all else constant.
+Next, this model is saying that for each additional point on the quality rating of the house we expect the price of a house at time of sale to increase by about 40,754 dollars on average, all else constant.
+
+
+
+
+
+*Model 3. After a ton of trial and error I landed on the last model to test. *
+*For this model we will regress the log of price at time of sale on age, area, the number of rooms, the quality rating, and an interaction term between the quality rating and area. We have already explained why we might want an interaction term for quality and area, it makes sense that houses with different quality ratings will cause the marginal effect of area increases on the price at time of sale to be different. For example, if you increase the area of a home but have a shitty quality rating because the property isn't well taken care of, the increase in area will will increase price less than that of a well kept property of the same area that has a good quality score. Let's take a look.*
+
+
+```{r}
+ model_3_Q9 = feols(I(log(price)) ~    age + area  + n_rooms + quality  + quality:area, data = midT_project_df)
+
+summary(model_3_Q9, vcov ='hetero')
+
+
+```
+
+All of these are significant at a level of at least 5%. The intercept, yet again, does not make sense in this model to interpret so we won't do so. 
+To find the marginal effects of area and quality we will need to partially differentiate, so let's first interpret the coefficients of age and number of rooms first.
+
+This model is telling us that for every additional year in age the house is we would expect the price at time of sale to decrease by about 0.03048% on average, all else equal.
+
+Next, the model is telling us that for each additional room a house has we expect the price at time of sale to decrease by about 1.32% on average, all else equal. This goes against our intuition, we would expect additional rooms to increase the price, leading to the potential that OVB is present or there is some other factor I cannot think of that would be explaining this behavior. Looking it up online real quick we can find a potential cause of this. According to the "Turner & Son Homes" website, larger houses generally have a lower cost per square foot because the costs can be spread out over more square feet, all else equal.
+
+
+***For the next two my confidence in the interpretation is not as strong and so please critique them!!***
+
+
+
+Next, to find the marginal effect on price of area, let's partially differentiate with respect to area:
+$$\frac{\partial\ log(price)}{\partial\space area} =  0.000592 - 0.000039(quality)$$
+Since we are allowing for the interaction between area and quality rating we see that the marginal effect of area on price is also dependent on the quality rating of the house. This is another interesting result because it is saying that with each additional square foot of area we expect houses with higher quality rating scores to increase in price less than those with lower scores, since if "quality" is higher we are subtracting a higher number from 0.000592. 
+So, with each additional increase in square foot, we expect a house with a quality score of 0 to increase in price at time of sale by about 0.0592% on average, all else equal (which doesn't make too much sense here since the quality rating has a low of 1). From there, with each point increase in the quality score of the house we expect the price at time to of sale to decrease. To find what this expectation would be we would first need to subtract the quantity from 0.000592 and then multiply that by 100 and get our percentage change. In case that is not explained clearly I will provide an example. For example, say the quality rating score a house got was 5, then to find the marginal effect of a unit increase in area on price at time of sale we would plug 5 in for "quality" and get :
+$$0.000592 - 0.000039(5) = 0.000397$$
+
+we would then multiply that by 100 to get: 0.0397, which is the percentage we were looking for. Thus, we would say in the case of a quality score of 5 we expect the marginal effect of a unit increase in area to increase the price at time of sale by about 0.0396% on average, all else constant. To find the marginal effect of a unit increase in area on price at time of sale for houses with different quality ratings we would follow this same process.
+
+
+Then to interpret the marginal effect of quality rating on the price at time of sale we follow the same sort of process as we just did for area.
+So let's partially differentiate with respect to quality:
+$$\frac{\partial\ log(price)}{\partial\space quality} =  0.193175 - 0.000039(area)$$
+Note here it really doesn't make sense to interpret this when area is 0, so let's interpret using the lowest square footage house in the data as our sort of "baseline". The lowest area is 334 square feet. Thus, to find the marginal effect of a unit increase in area on price at sale of a house with 334 square feet, we would plug 334 in for area and solve to arrive at:
+$$0.193175 - 0.000039(334) = 0.180149$$
+we would then multiply by 100 to get about 18.01, which is the percentage we were looking for. Thus we would say, in the case of a house with 334 square feet, an additional unit of area will increase price at time of sale by about 18.01% on average, all else equal.
+We could follow this same process to determine the marginal effect of area on price at time of sale for houses with different area by plugging different numbers.
+
+
+
+
+
+***Q10***
+
+"Model 3" from question 9 would be the one that I choose. One reason I choose this one is because the adjusted r-squared value is the highest and so the variation in price is explained most by this model relative to the other two. I know we cannot compare r-squared values across models with different forms of our outcome variable, but I checked the adjusted r-squared value even without logging price and it still explained more than the other 2. Plus, after then logging price this model seems to explain about 80 of the variation in price, which is pretty high in my opinion!
+Another reason I would pick this last model is because I believe it allows for the most insightful interpretations and the variables included are very important in determining price. We got the age of the house in there, the number of rooms, the area, the quality rating of the house, and an interaction between quality rating and area. These explanatory variable make up a lot of what determines the price of a home. 

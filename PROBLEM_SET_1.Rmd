@@ -1,0 +1,269 @@
+---
+title: "Problem Set 1"
+author: "Ryan Denton"
+date: "1/22/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Setup/Loading packages
+
+Q01. and Q02.
+
+```{r}
+list.files()
+
+library(pacman)
+library(stargazer)
+library(skimr)
+p_load(tidyverse)
+
+ps1_df = read.csv("001-data.csv")
+
+```
+
+
+
+
+
+
+
+Getting to know your data
+
+Q03.
+```{r}
+nrow(ps1_df)
+
+```
+If each row in this dataset represents a different county, then there are 710 counties in the data.
+
+
+
+Q04
+```{r}
+
+skim(ps1_df)
+
+```
+Each column represent a variable, thus there are 12 variables in the dataset. Further, we can see from this function that we are told that 9 of those are numeric,  but since "had_rosenwald_school" is an indicator variable that we won't count, there are actually 8 numeric variables.
+
+
+
+Q05.
+```{r}
+n_distinct(ps1_df$state)
+
+```
+There are 10 states that are in this dataset.
+
+
+
+
+
+
+Plotting the data
+
+Q06.
+```{r}
+hist(ps1_df$income_black_2010,
+     main = "Median Income for Black Households in 2010",
+     ylab="Number of Black Households",
+     xlab="Income(2010 dollars)",
+     col="aquamarine4",
+     ylim = c(0,350),
+     xlim = c(0,90000),
+     breaks=9,
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(0, 90000, 10000))
+axis(2, at = seq(0, 350, 25), las=1)
+
+
+```
+
+
+
+Q07.
+```{r}
+hist(ps1_df$income_white_2010,
+     main = "Median Income for White Households in 2010",
+     ylab="Number of White Households",
+     xlab="Income(2010 dollars)",
+     col= "brown",
+     ylim = c(0,350),
+     xlim = c(20000,130000),
+     breaks=9,
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(20000, 130000, 10000))
+axis(2, at = seq(0, 350, 25), las=1)
+
+
+```
+
+
+
+Q08. and Q09.
+```{r}
+ps1_df|>
+  summarize(
+    mean_white_income_2010 = mean(ps1_df$income_white_2010),
+    mean_black_income_2010 = mean(ps1_df$income_black_2010),
+    difference_in_mean_income = mean_white_income_2010 - mean_black_income_2010
+  )
+
+
+```
+We can see from this summary that the mean income for White households in the year 2010 in these counties was 47,364.71 (in 2010 dollars) and the mean income for Black households in the year 2010 in these counties was 29,459.58 (in 2010 dollars). Further, we can note that the difference between these two means is 17,905.13 (in 2010 dollars). This, in my opinion, is a large difference in the means and points to racial inequality in terms of pay in the year 2010.  
+
+
+
+
+Q10.
+```{r}
+hist(ps1_df$pop_enslaved_1860,
+     main = "Enslaved County Population in 1860",
+     ylab="Number of Counties",
+     xlab="Number of Enslaved (Per County)",
+     col="chocolate1",
+      ylim = c(0,300),
+     xlim = c(0,40000),
+     breaks = 15,
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(0, 38000, 2000))
+axis(2, at = seq(0, 275, 15), las=1)
+
+
+
+
+hist(ps1_df$pct_pop_enslaved_1860,
+     main = "Percentage of County Population Enslaved in 1860",
+     ylab="Number of Counties",
+     xlab="Percentage of Enslaved (Per County)",
+     col= "cadetblue",
+     ylim = c(0,120),
+     xlim = c(0,100),
+     breaks=10,
+     xaxt = "n", yaxt="n")
+axis(1, at = seq(0, 100, 10))
+axis(2, at = seq(0, 120, 10), las=1)
+     
+
+
+```
+
+
+
+The first histogram tells us how many counties fall within a certain range of the number of enslaved persons in that counties population, in the year 1860. For example, the left-most bar in the histogram I created tells us that about 268 of these counties had a county population of enslaved persons in 1860 of anywhere between 0 and 2000. The next bar to the right of that one tells us that that about 147 of these counties had a county population of enslaved persons in 1860 between 2001 and 4000. And so on.
+
+The second graph tells us something very similar but in terms of the percentage of the county's population that were enslaved. For example, the left-most bar in the histogram I created tells us that the number of counties, out of the 710, with 0 - 10% of their population enslaved was about 81. In other words, about 81 of these counties had an enslaved population of anywhere between 0 - 10% of the total county population. The next bar to the right tells us that about 108 counties of the 710 had an enslaved population of anywhere between 10% - 20%, 10% not included. And so on. 
+
+These both shed light on the number of counties, of these 710, that fall within certain ranges of their population being enslaved in 1860.  
+
+Note that the first histogram is a population, which is skewed to the right, while the percentage histogram has a much more uniform looking distribution from 0-60%, then begins to decrease of course after that. This means that there are a lot of counties with relatively small populations and so the number of enslaved may not look like a lot relative to all the counties when represented in population terms, but the percentages in those counties of enslaved are not as relatively small, on average. 
+
+
+
+Q11.
+```{r}
+ps1_df|>
+  ggplot(aes(x =pct_pop_enslaved_1860, y = income_black_2010))+
+  geom_point(col="blue4")+
+  labs(
+    x="Percent of County Population Enslaved in 1860",
+    y= "County Median Income for Black Households(2010 dollars)"
+  )
+
+
+
+```
+
+
+
+
+Q12. and Q13.
+```{r}
+stargazer(lm(ps1_df$income_black_2010 ~ ps1_df$pct_pop_enslaved_1860), type="text")
+
+
+```
+This table allows us to see that the coefficient on "pct_pop_enslaved_1860" is indeed negative. Not only that, but it is statistically significant at the 1% level of significance. Therefore we can conclude that this result is very unlikely to have happened purely by chance.
+
+What this is telling us is that the counties that had a higher percentage of their population enslaved in 1860 have lower medium incomes for black households in the year 2010, on average, all else constant.
+
+For every 1 percentage point increase in a counties population that was enslaved in 1860, we expect the median black household income in 2010 to fall by about 60 dollars on average. Thus, those counties that had higher rates of slavery in 1860 have lower median black household income in 2010, so there is evidence of racial inequality present 150 years later.
+
+The intercept is saying that we expect that any county with 0% of their population enslaved in 1860 would have a median black household income of about 31,658 dollars in 2010, on average, all else equal. 
+
+
+
+
+Q14.
+```{r}
+stargazer(lm(ps1_df$income_black_2010 ~ ps1_df$pop_enslaved_1860), type="text")
+
+```
+Here we can see that the coefficient of the "pop_enslaved_1860" variable is negative as well. This coefficient is saying that we would expect for each additional enslaved person in the county in the year 1860, median black household income in those counties in the year 2010 will decrease by about 20 cents, on average. Further we can notice that this coefficient is indeed statistically significant at the 5% level of significance.
+
+The intercept is telling us that in the counties with no enslaved individuals in the year 1860, we expect the median black household income in the year 2010 to be about 30,384, on average. 
+
+
+
+
+Q15.
+```{r}
+stargazer(lm(ps1_df$income_white_2010 ~ ps1_df$pop_enslaved_1860), type="text")
+
+```
+No, this explanatory variable clearly has different effects of the median income of white households and black households in the year 2010. In the case of black households we can recall that the value of this variable was negative, whereas here it is positive. Not only that but this variable is also significant at the 1% level, and thus very unlikely to have happened by chance.
+
+This regression output is telling us that for each additional enslaved person in a county (of these 710) in the year 1860 actually increases the median income of white households in that county in the year 2010 by about 39 cents, on average. This points toward the conclusion that white households in these counties actually benefit from racial inequality 150 years later. 
+
+
+
+
+Q16.
+
+Population is a potential source of omitted variable bias because counties with larger populations tend to have higher costs of living and therefore would most likely have higher median household incomes for both white and black households.
+
+Further, county population can also be correlated with the enslaved population in these counties. This of course is also influenced by the demographic of each county. For example, counties with larger populations are more likely to have more African Americans making up that population and therefore will have a higher enslaved population and percentage than those counties with a smaller population.
+
+Thus, leaving out the variable "population" in these models will lead to omitted variable bias.
+
+
+
+
+
+Q17.
+
+Yes I do believe that slavery appears to affect current economic outcomes for both black and white households. My reasoning for thinking this is due to the regressions we ran during this assignment, and the fact that the parameter estimates are indeed significant, along with the histograms we created. Even though they are extremely simple models, in my opinion they reveal a striking insight on some sort of relationship between slavery in 1860 and median household income 150 years later in 2010. There seems to be a negative impact on black households and a positive one on white households, leading one to the hypothesis that slavery in the past has a noticeable impact on aspects of our society in the present that merits further investigation using more complex models. Further analysis would allow us to gain a deeper understanding of the relationship (I am sure plenty of such models exist). 
+
+
+
+
+
+
+Q18.
+```{r}
+lm(log(income_black_2010) ~ pop_enslaved_1860, data= ps1_df)
+
+```
+For this model we would say that for each additional increase in the enslaved population in a county in the year 1860, we would expect black median household income in the year 2010 to decrease by about 0.0001431% on average, all else constant.
+
+
+
+
+
+Q19.
+
+Exogeneity means that nothing in the error term is explained by our explanatory variable and vice versa. Variables not controlled for can influence the outcome variable but they cannot be correlated with the explanatory variable for exogeneity to hold. 
+
+In the context of the regression in Q19 this means that no other variables that make up the error term that influence black median household income in the year 2010, are correlated with the enslaved population in the year 1860, if we are assuming exogeneity. This is extremely unlikely in this model, as it is so simple and the the r-squared and adjusted r-squared values are so low. we also know this is not the case because we ran a regression controlling for the population sizes in the two years and noticed omitted variable bias was indeed present due to lack of controlling for these variables. Further, even after controlling for the population sizes, the r-squared and adjusted r-squared values remained very low, meaning there are more variables we should control for. Intuition confirms this as we can think of other things that are sure to have affected the enslaved population in the year 1860 that are not present in the model, which will of course mean that as those variables that are in the error term fluctuate they will have an effect on the enslaved population in 1860 and thus the condition of exogeneity is not met.
+
+
+
+
+
+
+** Note that all of the interpretations assume no heteroskedasticity, among other assumptions, because we know in the face of heteroskedasticity our t-stats, p-values, and standard errors are wrong and thus our inference would be wrong. We would need to fix this is all our models after testing for it to determine whether that was necessary. 

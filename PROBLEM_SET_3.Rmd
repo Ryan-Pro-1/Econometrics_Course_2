@@ -1,0 +1,364 @@
+---
+title: "PS 3"
+author: "Ryan Denton"
+date: "2/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+***Q01: Load Packages & data***
+
+
+```{r}
+library(pacman)
+library(broom)
+library(here)
+library(fixest)
+library(tidyverse)
+library(TSA)
+library(lmtest)
+library(forecast)
+library(stargazer)
+
+list.files()
+
+
+ps_3_df = read.csv("003-data.csv")
+
+```
+
+
+
+
+
+
+***Q02***
+
+
+*Time series for the number of flights*
+```{r}
+
+ggplot( data = ps_3_df, aes(x= time, y = n_flights))+
+  geom_line( color = "blue")+ geom_point()+
+  labs(
+    x = 'Daily time counter (1/1/2018)-(12/31/2018)',
+    y = 'Total number of flights'
+  )
+
+```
+
+
+
+*For number of flights delayed 30+ minutes*
+```{r}
+ggplot( data = ps_3_df, aes(x= time, y = n_delayed))+
+  geom_line(color='red')+ geom_point()+
+  labs(
+    x = 'Daily time counter (1/1/2018)-(12/31/2018)',
+    y = 'Number of flights delayed 30+ mins'
+  )
+
+```
+
+
+
+*For percentage of flights delayed more than 30 minutes*
+```{r}
+ggplot( data = ps_3_df, aes(x= time, y = pct_delayed))+
+  geom_line(color= 'purple')+ geom_point()+
+  labs(
+    x = 'Daily time counter (1/1/2018)-(12/31/2018)',
+    y = '% of flights delayed 30+ mins.'
+  )
+
+```
+
+
+
+
+*For percentage of flights affected by weather delays*
+```{r}
+ggplot( data = ps_3_df, aes(x= time, y = pct_weather_delays))+
+  geom_line(color= 'chocolate4')+ geom_point()+
+  labs(
+    x = 'Daily time counter (1/1/2018)-(12/31/2018)',
+    y = '% of flights affected by weather delays'
+  )
+
+```
+
+
+
+
+
+
+***Q03***
+
+*Here we can use the autocorrelation function to see if it seems to be present in these data. They all definitely look to have autocorrelation just by the way the graphs look.*
+
+
+
+
+
+*Looking at number of flights*
+```{r}
+
+mod_n_flights_Q03 = lm( n_flights ~ time, data= ps_3_df)
+
+
+
+tsdisplay(ps_3_df$n_flights, main= 'Number of Flights')
+
+
+
+
+lmtest::dwtest(mod_n_flights_Q03)
+
+
+```
+Here there looks to be positive autocorrelation. Note the very low p-value and the high DW test stat. Also, since the DW test stat is between [0,2) it supports our conclusion of positive autocorrelation. Further, the ACF and PACF charts also support the claim of significant autocorrelation.
+
+
+*Next lets look at the number of flights delayed more than 30 mins*
+```{r}
+mod_n_delayed_Q03 = lm(n_delayed ~ time, data= ps_3_df)
+
+
+
+tsdisplay(ps_3_df$n_delayed, main= 'Number of Flights Delayed (30+ Mins)')
+
+
+lmtest::dwtest(mod_n_delayed_Q03)
+```
+Again there looks to be positive autocorrelation. DW test stat is between (0,2] again with a very low p-value.
+Further, the ACF and PACF charts also support the claim of significant autocorrelation.
+
+
+*Next, the percentage of flights delayed more than 30 mins, which we would expect to also have positive autocorrelation*
+```{r}
+mod_pct_delayed_Q03 = lm( pct_delayed ~ time, data= ps_3_df)
+
+
+tsdisplay(ps_3_df$pct_delayed, main= '% of Flights Delayed (30+ Mins)')
+
+lmtest::dwtest(mod_pct_delayed_Q03)
+
+```
+
+Indeed it does look to have positive autocorrelation as well. DW test stat is between (0,2] again with a very low p-value.
+Further, the ACF and PACF charts also support the claim of significant autocorrelation.
+
+
+
+*Last, lets look at the percentage of flights affected by weather delays*
+```{r}
+mod_pct_weather_delays_Q03 = lm( pct_weather_delays ~ time, data= ps_3_df)
+
+
+tsdisplay(ps_3_df$pct_weather_delays, main= '% of Flights Affected by Weather Delays')
+
+
+lmtest::dwtest(mod_pct_weather_delays_Q03)
+```
+
+Again, positive autocorrelation appears to be present here. DW test stat is between (0,2] again with a very low p-value.
+
+Further, the ACF and PACF charts also support the claim of significant autocorrelation.
+
+
+
+Notice for each of these the autocorrelation for at least the first lag tend to be large, significant, and positive. We can see it does trend downward, so as the lags increase their significance drops, although the drop is not strict as is does seem to fluctuate a bit while decreasing.
+
+Also, it makes sense that weather would affect not only a single day but also the next day and maybe even several days after that. Same with the number of flights and the flights delayed in general.
+
+Further, the dashed blue lines are our significance bands, if you will, letting us know that the lags that fall out of this band are significant.
+
+
+
+
+
+
+
+***Q04***
+
+
+*Static model. Regress percentage of flights that were delayed 30+ minutes on the percentage of flights affected by weather and the percentage of flights affected by security delays.*
+```{r}
+
+q04_mod = lm( pct_delayed ~ pct_weather_delays + pct_security_delays, data = ps_3_df)
+
+stargazer(q04_mod, type='text')
+
+
+```
+
+
+
+***Q05***
+
+
+The intercept value of about 28.45 tells us that if there were no flights affected by weather delays and no flights affected by security delays, then we would expect the percentage of flights delayed by 30+ minutes to be about 28%.
+
+
+
+
+***Q06***
+
+
+The coefficient value of about 2.5 for the percentage of flights affected by weather delays explanatory variable tells us that for each percentage point increase in flights affected by weather delays we expect the percent of flights delayed by 30+ minutes to increase by about 2.5 percentage points on average, all else equal.
+
+
+The coefficient of about 2.9 for the percentage of flights affected by security delays explanatory variable tells us that for each percentage point increase in flights affected by security delays we expect the percent of flights delayed by 30+ minutes to increase by about 2.9 percentage points on average, all else equal.
+
+
+
+
+
+
+***Q07***
+
+There will be upward bias of our coefficient on security delays because the effect from it being a winter holiday time period won't be teased apart between the two and the security delays coefficient will pick up some of this, thereby overestimating the effect of security delays during the winter holidays.
+
+
+
+
+
+
+***Q08***
+
+*Lets run the new regression with the indicator variable and the interactions then summarize the new results and the results from question 4 in a single stargazer table to compare.*
+```{r}
+q08_mod = lm( pct_delayed ~ pct_weather_delays + pct_security_delays + is_weekend + is_weekend:pct_weather_delays + is_weekend:pct_security_delays, data = ps_3_df)
+
+stargazer(q04_mod, q08_mod, type = 'text', keep.stat = c("n","adj.rsq"),
+          dep.var.caption = "Columns: (1) = Q04 Reg., (2) = Q08 Reg")
+
+```
+
+From this model it does not appear that flight delays function any differently on the weekends. None of the coefficients of the variables including the weekend indicator are statistically significant, thus we cannot say anything confidently about any difference between weekend and non-weekend delays.
+
+
+
+
+
+
+***Q09***
+
+
+Static models are inappropriate in such a situation as this problem set because static models restrict effects to immediate ones in which we are only looking at a single time period. It is much more appropriate here to use dynamic models because it is very likely that previous days effect the next days outcomes. For example, if there are delays due to weather on one day, the next day is most likely to be effected by that as well, not just the same day's flights. Static models don't allow for this needed interaction.
+
+
+
+
+
+
+***Q10***
+
+
+*Time for the dynamic model!!! :)*
+```{r}
+q10_mod = lm( pct_delayed ~ pct_weather_delays + lag(pct_weather_delays) + pct_security_delays + lag(pct_security_delays), data = ps_3_df)
+
+stargazer(q10_mod, type='text')
+
+```
+
+
+
+
+
+
+
+***Q11***
+
+
+Yes, there is statistically significant evidence, in this model, that delays yesterday affect delays today, at least for security and weather since that is all this model is able to tell us. We can see in this model that the lag for the percentage of flights affected by weather delays is significant at the 1% level and that the coefficient on the lag of the percent of flights affected by security delays is significant at the 10% level. This is telling us there appears to be significant effects on the percentage of flights delayed 30+ minutes from security and weather delays from the previous day. This is of course assuming that there is no bias and that we can trust our standard errors, which may not be the case without investigating this further and doing something to help with bias that might be present.
+
+
+
+
+
+
+***Q12***
+
+
+To find this total effect we must sum the coefficients of the percentage of flights affects by weather delays and its lag, giving us :
+$$2.33 + 0.467 = 2.8$$
+
+Thus, for every 1 percentage point increase in flights affected by weather delays, we would expect the total percent of flights delayed 30+ minutes to increase by about 2.8 percentage points on average, all else equal.
+
+
+
+
+
+
+***Q13***
+
+
+*Now we will estimate an ADL(1,1) model.*
+```{r}
+q13_mod = lm( pct_delayed ~ pct_weather_delays + lag(pct_weather_delays) + pct_security_delays + lag(pct_security_delays) + lag(pct_delayed), data = ps_3_df)
+
+stargazer(q13_mod, type='text')
+```
+
+
+
+
+
+
+***Q14***
+
+For every percentage point increase in the percent of flights delayed 30+ minutes for 1 days (i.e. time period), we expect the percentage of flights delayed by 30+ minutes the next day (i.e. the following time period) to increase by about 0.2 percentage points on average, all else constant. Note that there is bias due to the fact we have a lagged dependent variable, as well as noting earlier that autocorrelation does seem to be present, and we haven't done anything to help with that in this model.
+
+Note that adding this lagged outcome variable changed the significance of our lagged security and lagged weather delays coefficient. They are no longer significant, as we found in the previous model.
+
+
+
+
+
+
+***Q15***
+
+
+If there is no autocorrelation in the disturbances then OLS is still biased when estimating the coefficients of the model. This is because we introduce bias when we include lagged outcome variables into our model. Further, recall that for consistency we just need contemporaneous exogeneity, which we do have in this case and so OLS is consistent. This is because contemporaneous exogeneity will hold here since there is no autocorrelation in the disturbances and therefore no correlation between the disturbance in time period t and the explanatory variable in time period t.
+
+
+
+
+
+
+***Q16***
+
+
+If there is autocorrelation in the disturbances in a model such as this one, with a lagged outcome variable, it violates contemporaneous exogeneity and so OLS is biased due to this lagged outcome variable. Further, it will also be inconsistent for the coefficients. This is because the disturbance in time period t is correlated with the disturbance in time period t-1, by definition of autocorrelation, and so we have bias AND we will also have correlation between explanatory variables in time period t and explanatory variables in time period t (violating contemporaneous exogeneity, thus causing OLS to be inconsistent).
+
+
+
+
+
+
+***Q17***
+
+
+Out of the regression models we did in this assignment I would say that I don't really trust any of them fully. I say this because the dynamic model in question 13 will be the best at explaining the relationship (has the highest adjusted r-squared value of them all also), but when we ran the dynamic model we didn't do so in such a way to help with the bias that we introduce when we add a lagged outcome variable. Even more, as we noted in question 3, there is autocorrelation present here and so our estimates will also be inconsistent because that is another thing we did not 'fix' in our dynamic model. Thus, the best model of the four that we ran, in my opinion, is both bias and inconsistent because we didn't do anything about the bias or the violation of contemporaneous exogeneity that causes inconsistency. 
+
+
+If I HAD to choose, I would choose between the model in question 10 and the model in question 13. I would most likely go with the model in question 13 as I assume it will explain the variation of the outcome variable better (due to the higher adjusted r-squared) but to investigate a bit further we can compare the sum of squared residuals by looking at an anova table:
+```{r}
+(anova( q10_mod))
+
+(anova( q13_mod))
+
+```
+
+
+Notice that the model from question 13 has a lower sum of squared residuals and that the lagged outcome variable is significant at the 1%.
+
+Thus, if I had to choose out of these models I would choose the model from question 13.
